@@ -228,11 +228,17 @@ ${text}
 
         const data = await response.json();
 
-        document.getElementById("typing")?.remove();
+document.getElementById("typing")?.remove();
 
-        messages.innerHTML += `
+if (!response.ok) {
+
+    throw new Error(data.error || "API Error");
+
+}
+
+messages.innerHTML += `
 <div class="bot-message">
-${(data.reply || data.error || "No response").replace(/\n/g,"<br>")}
+${data.reply.replace(/\n/g,"<br>")}
 </div>
 `;
 
