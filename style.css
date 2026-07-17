@@ -392,7 +392,13 @@ box-shadow:0 0 15px rgba(14,165,233,.4);
    NOVA AI STARTUP SCREEN
 ========================================= */
 
-#startupScreen{
+#startupScreen.hide{
+
+opacity:0;
+
+pointer-events:none;
+
+}
 
 position:fixed;
 
@@ -449,7 +455,8 @@ animation:rotateRing linear infinite;
 }
 
 .ring1{
-
+   
+border-style:dashed;
 width:220px;
 height:220px;
 
@@ -460,7 +467,8 @@ box-shadow:0 0 30px #00d4ff;
 }
 
 .ring2{
-
+   
+border-style:dotted;
 width:170px;
 height:170px;
 
