@@ -348,6 +348,14 @@ function speak(text) {
         voices.find(v =>
             v.lang.startsWith("en") &&
             v.name.toLowerCase().includes("google")
+            ) || voices.find(v => v.lang.startsWith("en"));
+
+if (voice) {
+    speech.voice = voice;
+}
+
+speechSynthesis.speak(speech);
+}
 
 
 
