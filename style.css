@@ -396,13 +396,7 @@ box-shadow:0 0 15px rgba(14,165,233,.4);
    NOVA AI STARTUP SCREEN
 ========================================= */
 
-#startupScreen.hide{
-
-opacity:0;
-
-pointer-events:none;
-
-}
+#startupScreen{
 
 position:fixed;
 
