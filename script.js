@@ -299,7 +299,15 @@ async function sendMessage() {
 
 sendBtn.addEventListener("click", sendMessage);
 
-input.addEventListener("keydown", (e
+input.addEventListener("keydown", (e) => {
+
+    if (e.key === "Enter") {
+
+        sendMessage();
+
+    }
+
+});
                             
 // =============================================
 // NOVA AI v5
@@ -339,7 +347,7 @@ function speak(text) {
 
         voices.find(v =>
             v.lang.startsWith("en") &&
-            v.name.toLower
+            v.name.toLowerCase().includes("google")
 
 
 
