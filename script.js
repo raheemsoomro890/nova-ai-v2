@@ -183,13 +183,9 @@ newChatBtn.addEventListener("click", createChat);
 // NOVA AI SPEAK
 // =====================================
 
-function speak(text) {
-
-if (speechSynthesis.speaking) {
+function speak(text){
 
 speechSynthesis.cancel();
-
-}
 
 const speech = new SpeechSynthesisUtterance(text);
 
@@ -203,14 +199,19 @@ speech.volume = 1;
 
 const voices = speechSynthesis.getVoices();
 
-const femaleVoice = voices.find(v =>
+const preferredVoice =
+voices.find(v =>
 v.lang.startsWith("en") &&
-v.name.toLowerCase().includes("female")
+v.name.toLowerCase().includes("google")
+)
+||
+voices.find(v =>
+v.lang.startsWith("en")
 );
 
-if (femaleVoice) {
+if(preferredVoice){
 
-speech.voice = femaleVoice;
+speech.voice = preferredVoice;
 
 }
 
