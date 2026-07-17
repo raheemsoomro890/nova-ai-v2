@@ -233,6 +233,12 @@ ${data.reply.replace(/\n/g,"<br>")}
 </div>
 `;
 
+speak(data.reply);
+
+saveCurrentChat();
+
+messages.scrollTop = messages.scrollHeight;
+
 // Nova speaks
 speak(data.reply);
 
