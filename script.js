@@ -227,10 +227,17 @@ async function sendMessage() {
     // User Message
 
     messages.innerHTML += `
-<div class="user-message">
-${text}
+<div class="bot-message">
+${data.reply.replace(/\n/g,"<br>")}
 </div>
 `;
+
+// Nova speaks
+speak(data.reply);
+
+saveCurrentChat();
+
+messages.scrollTop = messages.scrollHeight;
 
     input.value = "";
 
