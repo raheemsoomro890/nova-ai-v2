@@ -1,6 +1,6 @@
 // =============================================
-// NOVA AI v5
-// PART 1 - CORE + CHAT MANAGER
+// NOVA AI v6
+// PART 1 - CORE & CHAT MANAGER
 // =============================================
 
 "use strict";
@@ -26,7 +26,7 @@ const app = document.querySelector(".app");
 // ==============================
 
 const Nova = {
-    version: "5.0",
+    version: "6.0",
     name: "Nova AI",
     online: true,
     memory: []
@@ -49,7 +49,7 @@ function saveStorage() {
 }
 
 // ==============================
-// SCROLL
+// AUTO SCROLL
 // ==============================
 
 function scrollBottom() {
@@ -65,7 +65,7 @@ function createChat() {
     const id = Date.now().toString();
 
     const chat = {
-        id,
+        id: id,
         title: "New Chat",
         messages: `
 <div class="bot-message">
@@ -107,7 +107,7 @@ function loadChat(id) {
 }
 
 // ==============================
-// SAVE CHAT
+// SAVE CURRENT CHAT
 // ==============================
 
 function saveCurrentChat() {
@@ -131,7 +131,7 @@ function saveCurrentChat() {
 }
 
 // ==============================
-// HISTORY
+// CHAT HISTORY
 // ==============================
 
 function renderHistory() {
@@ -150,13 +150,10 @@ function renderHistory() {
             item.style.background = "#2563eb";
         }
 
-        item.onclick = () => {
-
+        item.addEventListener("click", () => {
             loadChat(chat.id);
-
             renderHistory();
-
-        };
+        });
 
         chatHistory.appendChild(item);
 
@@ -181,13 +178,13 @@ if (chats.length === 0) {
 }
 
 // ==============================
-// NEW CHAT BUTTON
+// NEW CHAT
 // ==============================
 
 newChatBtn.addEventListener("click", createChat);
 
 // =============================================
-// NOVA AI v5
+// NOVA AI v6
 // PART 2 - CHAT SYSTEM
 // =============================================
 
@@ -203,9 +200,9 @@ async function sendMessage() {
 
     // User Message
     messages.innerHTML += `
-    <div class="user-message">
-        ${text}
-    </div>
+        <div class="user-message">
+            ${text}
+        </div>
     `;
 
     input.value = "";
@@ -216,9 +213,9 @@ async function sendMessage() {
 
     // Typing Indicator
     messages.innerHTML += `
-    <div class="bot-message" id="typing">
-        🤖 Nova AI is thinking...
-    </div>
+        <div class="bot-message" id="typing">
+            🤖 Nova AI is thinking...
+        </div>
     `;
 
     scrollBottom();
@@ -250,19 +247,17 @@ async function sendMessage() {
         }
 
         messages.innerHTML += `
-        <div class="bot-message">
-            ${data.reply.replace(/\n/g,"<br>")}
-        </div>
+            <div class="bot-message">
+                ${data.reply.replace(/\n/g, "<br>")}
+            </div>
         `;
 
-        // Voice reply (Part 3)
+        // Speak if available
         if (typeof speak === "function") {
-
             speak(data.reply);
-
         }
 
-        // Future Memory
+        // Save memory
         Nova.memory.push({
             user: text,
             ai: data.reply,
@@ -278,9 +273,9 @@ async function sendMessage() {
         document.getElementById("typing")?.remove();
 
         messages.innerHTML += `
-        <div class="bot-message">
-            ❌ Error connecting to Nova AI.
-        </div>
+            <div class="bot-message">
+                ❌ Error connecting to Nova AI.
+            </div>
         `;
 
         console.error(error);
@@ -308,9 +303,9 @@ input.addEventListener("keydown", (e) => {
     }
 
 });
-                            
+
 // =============================================
-// NOVA AI v5
+// NOVA AI v6
 // PART 3 - VOICE SYSTEM
 // =============================================
 
@@ -333,41 +328,68 @@ function speak(text) {
 
     let voices = speechSynthesis.getVoices();
 
+    const setVoice = () => {
+
+        voices = speechSynthesis.getVoices();
+
+        const voice =
+            voices.find(v =>
+                v.lang.startsWith("en") &&
+                v.name.toLowerCase().includes("google")
+            ) ||
+            voices.find(v =>
+                v.lang.startsWith("en")
+            );
+
+        if (voice) {
+            speech.voice = voice;
+        }
+
+        speechSynthesis.speak(speech);
+
+    };
+
     if (voices.length === 0) {
-
-        speechSynthesis.onvoiceschanged = () => {
-
-            voices = speechSynthesis.getVoices();
-
-        };
-
+        speechSynthesis.onvoiceschanged = setVoice;
+    } else {
+        setVoice();
     }
 
-    const voice =
-
-        voices.find(v =>
-            v.lang.startsWith("en") &&
-            v.name.toLowerCase().includes("google")
-            ) || voices.find(v => v.lang.startsWith("en"));
-
-if (voice) {
-    speech.voice = voice;
 }
 
-speechSynthesis.speak(speech);
-}
+// ==============================
+// SPEECH RECOGNITION
+// ==============================
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (SpeechRecognition && micBtn) {
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micBtn.addEventListener("click", () =>
 
 
 
-// =============================================
-// NOVA AI v5
+      // =============================================
+// NOVA AI v6
 // PART 4 - STARTUP SYSTEM
 // =============================================
 
 window.addEventListener("load", () => {
 
-    const steps = [
+    if (app) {
+        app.style.opacity = "0";
+    }
 
+    const steps = [
         "Initializing...",
         "Loading AI Core...",
         "Connecting to Gemini...",
@@ -375,31 +397,55 @@ window.addEventListener("load", () => {
         "Loading Voice Engine...",
         "Optimizing Performance...",
         "System Online ✓"
-
     ];
 
     let index = 0;
 
     const interval = setInterval(() => {
 
-        if (bootText) {
-
+        if (bootText && index < steps.length) {
             bootText.textContent = steps[index];
-
         }
 
         index++;
 
-        if (index >= steps.length)
+        if (index >= steps.length) {
+
+            clearInterval(interval);
+
+            setTimeout(() => {
+
+                if (startupScreen) {
+                    startupScreen.classList.add("hide");
+                }
+
+                if (app) {
+                    app.style.opacity = "1";
+                }
+
+            }, 800);
+
+        }
+
+    }, 700);
+
+});
+
+// =============================================
+// NOVA AI READY
+// =============================================
+
+console.log(`
+==================================
+      NOVA AI v6 READY
+==================================
+Status  : Online
+Voice   : Enabled
+Memory  : Enabled
+Storage : Enabled
+==================================
+`);  
 
 
 
-
-
-
-
-            
-                    
-                                
-
-                
+                            
