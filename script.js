@@ -226,12 +226,83 @@ async function sendMessage() {
     if (!text) return;
 
     // User Message
-
     messages.innerHTML += `
-<div class="bot-message">
-${data.reply.replace(/\n/g,"<br>")}
-</div>
-`;
+    <div class="user-message">
+        ${text}
+    </div>
+    `;
+
+    input.value = "";
+
+    saveCurrentChat();
+
+    messages.scrollTop = messages.scrollHeight;
+
+    // Typing
+    messages.innerHTML += `
+    <div class="bot-message" id="typing">
+        🤖 Nova AI is thinking...
+    </div>
+    `;
+
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+
+        const response = await fetch("/api/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: text
+            })
+
+        });
+
+        const data = await response.json();
+
+        document.getElementById("typing")?.remove();
+
+        if (!response.ok) {
+
+            throw new Error(data.error || "API Error");
+
+        }
+
+        messages.innerHTML += `
+        <div class="bot-message">
+            ${data.reply.replace(/\n/g,"<br>")}
+        </div>
+        `;
+
+        // Nova Speak
+        speak(data.reply);
+
+        saveCurrentChat();
+
+        messages.scrollTop = messages.scrollHeight;
+
+    }
+
+    catch (error) {
+
+        document.getElementById("typing")?.remove();
+
+        messages.innerHTML += `
+        <div class="bot-message">
+            ❌ Error connecting to Nova AI.
+        </div>
+        `;
+
+        saveCurrentChat();
+
+    }
+
+}
 
 speak(data.reply);
 
