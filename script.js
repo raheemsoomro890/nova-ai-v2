@@ -277,3 +277,58 @@ input.addEventListener("keydown", function(e){
     }
 
 });
+
+
+
+
+// =====================================
+// NOVA AI STARTUP
+// =====================================
+
+window.addEventListener("load", () => {
+
+    const startup = document.getElementById("startupScreen");
+
+    const app = document.querySelector(".app");
+
+    const bootText = document.getElementById("bootText");
+
+    const steps = [
+
+        "Initializing...",
+
+        "Loading AI Core...",
+
+        "Connecting to Gemini...",
+
+        "Loading Neural Engine...",
+
+        "System Online ✓"
+
+    ];
+
+    let index = 0;
+
+    const interval = setInterval(() => {
+
+        bootText.textContent = steps[index];
+
+        index++;
+
+        if(index >= steps.length){
+
+            clearInterval(interval);
+
+            setTimeout(() => {
+
+                startup.classList.add("hide");
+
+                app.style.opacity = "1";
+
+            },800);
+
+        }
+
+    },900);
+
+});
