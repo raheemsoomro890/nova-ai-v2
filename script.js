@@ -374,7 +374,18 @@ if (SpeechRecognition && micBtn) {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    micBtn.addEventListener("click", () =>
+    micBtn.addEventListener("click", () => {
+    recognition.start();
+});
+
+recognition.onresult = (event) => {
+    input.value = event.results[0][0].transcript;
+    sendMessage();
+};
+
+recognition.onend = () => {};
+
+recognition.onerror = () => {};
 
 
 
