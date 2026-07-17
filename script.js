@@ -1,13 +1,13 @@
 // =============================================
-// NOVA AI v4 Professional
-// Part 1 - Core & Chat Manager
+// NOVA AI v5
+// PART 1 - CORE + CHAT MANAGER
 // =============================================
 
 "use strict";
 
-// =============================================
+// ==============================
 // DOM ELEMENTS
-// =============================================
+// ==============================
 
 const messages = document.getElementById("messages");
 const input = document.getElementById("userInput");
@@ -21,73 +21,57 @@ const startupScreen = document.getElementById("startupScreen");
 const bootText = document.getElementById("bootText");
 const app = document.querySelector(".app");
 
-// =============================================
+// ==============================
 // NOVA CORE
-// =============================================
+// ==============================
 
 const Nova = {
-
-    version: "4.0",
-
+    version: "5.0",
+    name: "Nova AI",
     online: true,
-
-    memory: [],
-
-    speaking: false,
-
-    listening: false
-
+    memory: []
 };
 
-// =============================================
+// ==============================
 // STORAGE
-// =============================================
+// ==============================
 
-let chats =
-JSON.parse(localStorage.getItem("novaChats")) || [];
+let chats = JSON.parse(localStorage.getItem("novaChats")) || [];
+let currentChat = localStorage.getItem("currentChat");
 
-let currentChat =
-localStorage.getItem("currentChat");
-
-// =============================================
+// ==============================
 // SAVE STORAGE
-// =============================================
+// ==============================
 
-function saveStorage(){
-
-    localStorage.setItem(
-        "novaChats",
-        JSON.stringify(chats)
-    );
-
-    localStorage.setItem(
-        "currentChat",
-        currentChat
-    );
-
+function saveStorage() {
+    localStorage.setItem("novaChats", JSON.stringify(chats));
+    localStorage.setItem("currentChat", currentChat);
 }
 
-// =============================================
-// CREATE NEW CHAT
-// =============================================
+// ==============================
+// SCROLL
+// ==============================
 
-function createChat(){
+function scrollBottom() {
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// ==============================
+// CREATE CHAT
+// ==============================
+
+function createChat() {
 
     const id = Date.now().toString();
 
     const chat = {
-
         id,
-
-        title:"New Chat",
-
-        messages:`
+        title: "New Chat",
+        messages: `
 <div class="bot-message">
 👋 Welcome to <b>Nova AI</b><br><br>
 How can I help you today?
-</div>
-`
-
+</div>`
     };
 
     chats.unshift(chat);
@@ -102,16 +86,15 @@ How can I help you today?
 
 }
 
-// =============================================
+// ==============================
 // LOAD CHAT
-// =============================================
+// ==============================
 
-function loadChat(id){
+function loadChat(id) {
 
-    const chat =
-    chats.find(c=>c.id===id);
+    const chat = chats.find(c => c.id === id);
 
-    if(!chat) return;
+    if (!chat) return;
 
     currentChat = id;
 
@@ -123,27 +106,22 @@ function loadChat(id){
 
 }
 
-// =============================================
-// SAVE CURRENT CHAT
-// =============================================
+// ==============================
+// SAVE CHAT
+// ==============================
 
-function saveCurrentChat(){
+function saveCurrentChat() {
 
-    const chat =
-    chats.find(c=>c.id===currentChat);
+    const chat = chats.find(c => c.id === currentChat);
 
-    if(!chat) return;
+    if (!chat) return;
 
     chat.messages = messages.innerHTML;
 
-    const firstMessage =
-    messages.querySelector(".user-message");
+    const firstUser = messages.querySelector(".user-message");
 
-    if(firstMessage && chat.title==="New Chat"){
-
-        chat.title =
-        firstMessage.innerText.substring(0,30);
-
+    if (firstUser && chat.title === "New Chat") {
+        chat.title = firstUser.innerText.substring(0, 30);
     }
 
     saveStorage();
@@ -152,30 +130,27 @@ function saveCurrentChat(){
 
 }
 
-// =============================================
-// CHAT HISTORY
-// =============================================
+// ==============================
+// HISTORY
+// ==============================
 
-function renderHistory(){
+function renderHistory() {
 
     chatHistory.innerHTML = "";
 
-    chats.forEach(chat=>{
+    chats.forEach(chat => {
 
-        const item =
-        document.createElement("div");
+        const item = document.createElement("div");
 
         item.className = "history-item";
 
         item.textContent = chat.title;
 
-        if(chat.id===currentChat){
-
-            item.style.background="#2563eb";
-
+        if (chat.id === currentChat) {
+            item.style.background = "#2563eb";
         }
 
-        item.onclick=()=>{
+        item.onclick = () => {
 
             loadChat(chat.id);
 
@@ -189,51 +164,37 @@ function renderHistory(){
 
 }
 
-// =============================================
-// AUTO SCROLL
-// =============================================
-
-function scrollBottom(){
-
-    messages.scrollTop =
-    messages.scrollHeight;
-
-}
-
-// =============================================
+// ==============================
 // FIRST LOAD
-// =============================================
+// ==============================
 
-if(chats.length===0){
+if (chats.length === 0) {
 
     createChat();
 
-}else{
+} else {
 
     renderHistory();
 
-    loadChat(
-        currentChat || chats[0].id
-    );
+    loadChat(currentChat || chats[0].id);
 
 }
 
+// ==============================
+// NEW CHAT BUTTON
+// ==============================
+
+newChatBtn.addEventListener("click", createChat);
+
 // =============================================
-// BUTTON EVENTS
+// NOVA AI v5
+// PART 2 - CHAT SYSTEM
 // =============================================
 
-newChatBtn.addEventListener(
-    "click",
-    createChat
-);
+// ==============================
+// SEND MESSAGE
+// ==============================
 
-
-// =====================================
-// NOVA AI v3
-// PART 2 - Chat Functions
-// =====================================
-
-// Send Message
 async function sendMessage() {
 
     const text = input.value.trim();
@@ -251,7 +212,7 @@ async function sendMessage() {
 
     saveCurrentChat();
 
-    messages.scrollTop = messages.scrollHeight;
+    scrollBottom();
 
     // Typing Indicator
     messages.innerHTML += `
@@ -260,18 +221,22 @@ async function sendMessage() {
     </div>
     `;
 
-    messages.scrollTop = messages.scrollHeight;
+    scrollBottom();
 
     try {
 
         const response = await fetch("/api/chat", {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
                 message: text
             })
+
         });
 
         const data = await response.json();
@@ -279,27 +244,71 @@ async function sendMessage() {
         document.getElementById("typing")?.remove();
 
         if (!response.ok) {
+
             throw new Error(data.error || "API Error");
+
         }
 
         messages.innerHTML += `
         <div class="bot-message">
-            ${data.reply.replace(/\n/g, "<br>")}
+            ${data.reply.replace(/\n/g,"<br>")}
         </div>
         `;
 
-        // Speak reply (Part 3)
-        if (typeof speak ===
+        // Voice reply (Part 3)
+        if (typeof speak === "function") {
 
+            speak(data.reply);
 
-            // ==========================================
-// NOVA AI v3
-// Part 3 - Voice System + Startup
-// ==========================================
+        }
 
-// ==========================
+        // Future Memory
+        Nova.memory.push({
+            user: text,
+            ai: data.reply,
+            time: new Date().toLocaleTimeString()
+        });
+
+        saveCurrentChat();
+
+        scrollBottom();
+
+    } catch (error) {
+
+        document.getElementById("typing")?.remove();
+
+        messages.innerHTML += `
+        <div class="bot-message">
+            ❌ Error connecting to Nova AI.
+        </div>
+        `;
+
+        console.error(error);
+
+        saveCurrentChat();
+
+        scrollBottom();
+
+    }
+
+}
+
+// ==============================
+// EVENTS
+// ==============================
+
+sendBtn.addEventListener("click", sendMessage);
+
+input.addEventListener("keydown", (e
+                            
+// =============================================
+// NOVA AI v5
+// PART 3 - VOICE SYSTEM
+// =============================================
+
+// ==============================
 // TEXT TO SPEECH
-// ==========================
+// ==============================
 
 function speak(text) {
 
@@ -314,45 +323,43 @@ function speak(text) {
     speech.pitch = 1;
     speech.volume = 1;
 
-    const voices = speechSynthesis.getVoices();
+    let voices = speechSynthesis.getVoices();
+
+    if (voices.length === 0) {
+
+        speechSynthesis.onvoiceschanged = () => {
+
+            voices = speechSynthesis.getVoices();
+
+        };
+
+    }
 
     const voice =
+
         voices.find(v =>
             v.lang.startsWith("en") &&
-            v.name.toLowerCase().includes("google")
-        ) ||
-        voices.find(v =>
-            v.lang.startsWith("en")
-        );
-
-    if (voice) {
+            v.name.toLower
 
 
 
-    // ==========================================
-// NOVA AI v3
-// Part 4 - Startup + Final System
-// ==========================================
-
-// ==========================
-// STARTUP ANIMATION
-// ==========================
+// =============================================
+// NOVA AI v5
+// PART 4 - STARTUP SYSTEM
+// =============================================
 
 window.addEventListener("load", () => {
 
-    const startup = document.getElementById("startupScreen");
-    const app = document.querySelector(".app");
-    const bootText = document.getElementById("bootText");
-
-    if (app) app.style.opacity = "0";
-
     const steps = [
+
         "Initializing...",
         "Loading AI Core...",
-        "Loading Neural Engine...",
         "Connecting to Gemini...",
-        "Loading Voice System...",
+        "Loading Memory...",
+        "Loading Voice Engine...",
+        "Optimizing Performance...",
         "System Online ✓"
+
     ];
 
     let index = 0;
@@ -360,4 +367,23 @@ window.addEventListener("load", () => {
     const interval = setInterval(() => {
 
         if (bootText) {
-           
+
+            bootText.textContent = steps[index];
+
+        }
+
+        index++;
+
+        if (index >= steps.length)
+
+
+
+
+
+
+
+            
+                    
+                                
+
+                
