@@ -332,3 +332,64 @@ window.addEventListener("load", () => {
     },900);
 
 });
+
+
+
+
+// =====================================
+// NOVA AI VOICE MODE
+// =====================================
+
+const micBtn = document.getElementById("micBtn");
+
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "en-US";
+
+recognition.interimResults = false;
+
+recognition.continuous = false;
+
+micBtn.addEventListener("click", () => {
+
+recognition.start();
+
+micBtn.classList.add("listening");
+
+});
+
+recognition.onresult = (event) => {
+
+const speech = event.results[0][0].transcript;
+
+input.value = speech;
+
+sendMessage();
+
+};
+
+recognition.onend = () => {
+
+micBtn.classList.remove("listening");
+
+};
+
+recognition.onerror = () => {
+
+micBtn.classList.remove("listening");
+
+};
+
+} else {
+
+micBtn.style.display = "none";
+
+console.log("Speech Recognition not supported.");
+
+    }
