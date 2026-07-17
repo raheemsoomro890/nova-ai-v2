@@ -179,6 +179,44 @@ newChatBtn.addEventListener("click", createChat);
 // NOVA AI v2
 // Part 2 - AI Chat
 // =====================================
+// =====================================
+// NOVA AI SPEAK
+// =====================================
+
+function speak(text) {
+
+if (speechSynthesis.speaking) {
+
+speechSynthesis.cancel();
+
+}
+
+const speech = new SpeechSynthesisUtterance(text);
+
+speech.lang = "en-US";
+
+speech.rate = 1;
+
+speech.pitch = 1;
+
+speech.volume = 1;
+
+const voices = speechSynthesis.getVoices();
+
+const femaleVoice = voices.find(v =>
+v.lang.startsWith("en") &&
+v.name.toLowerCase().includes("female")
+);
+
+if (femaleVoice) {
+
+speech.voice = femaleVoice;
+
+}
+
+speechSynthesis.speak(speech);
+
+}
 
 async function sendMessage() {
 
