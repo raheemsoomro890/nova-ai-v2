@@ -1,462 +1,377 @@
-// =============================================
-// NOVA AI v6
-// PART 1 - CORE & CHAT MANAGER
-// =============================================
-
+```javascript
 "use strict";
 
-// ==============================
-// DOM ELEMENTS
-// ==============================
+document.addEventListener("DOMContentLoaded", () => {
+  const messagesEl = document.getElementById("messages");
+  const userInput = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const micBtn = document.getElementById("micBtn");
+  const newChatBtn = document.getElementById("newChatBtn");
+  const chatHistoryEl = document.getElementById("chatHistory");
+  const startupScreen = document.getElementById("startupScreen");
+  const bootText = document.getElementById("bootText");
+  const appEl = document.querySelector(".app");
 
-const messages = document.getElementById("messages");
-const input = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-const micBtn = document.getElementById("micBtn");
+  const STORAGE_KEY = "nova_ai_chats";
+  const CURRENT_CHAT_KEY = "nova_ai_current_chat";
 
-const newChatBtn = document.getElementById("newChatBtn");
-const chatHistory = document.getElementById("chatHistory");
+  let chats = {};
+  let currentChatId = null;
+  let recognition = null;
+  let isListening = false;
 
-const startupScreen = document.getElementById("startupScreen");
-const bootText = document.getElementById("bootText");
-const app = document.querySelector(".app");
+  function generateId() {
+    return "chat_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+  }
 
-// ==============================
-// NOVA CORE
-// ==============================
+  function loadStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      chats = raw ? JSON.parse(raw) : {};
+    } catch (err) {
+      console.error("Failed to load chats from storage:", err);
+      chats = {};
+    }
+  }
 
-const Nova = {
-    version: "6.0",
-    name: "Nova AI",
-    online: true,
-    memory: []
-};
+  function saveStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+    } catch (err) {
+      console.error("Failed to save chats to storage:", err);
+    }
+  }
 
-// ==============================
-// STORAGE
-// ==============================
+  function saveCurrentChat() {
+    if (!currentChatId || !chats[currentChatId]) return;
+    try {
+      localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+      saveStorage();
+    } catch (err) {
+      console.error("Failed to save current chat:", err);
+    }
+  }
 
-let chats = JSON.parse(localStorage.getItem("novaChats")) || [];
-let currentChat = localStorage.getItem("currentChat");
-
-// ==============================
-// SAVE STORAGE
-// ==============================
-
-function saveStorage() {
-    localStorage.setItem("novaChats", JSON.stringify(chats));
-    localStorage.setItem("currentChat", currentChat);
-}
-
-// ==============================
-// AUTO SCROLL
-// ==============================
-
-function scrollBottom() {
-    messages.scrollTop = messages.scrollHeight;
-}
-
-// ==============================
-// CREATE CHAT
-// ==============================
-
-function createChat() {
-
-    const id = Date.now().toString();
-
-    const chat = {
-        id: id,
-        title: "New Chat",
-        messages: `
-<div class="bot-message">
-👋 Welcome to <b>Nova AI</b><br><br>
-How can I help you today?
-</div>`
+  function createChat() {
+    const id = generateId();
+    chats[id] = {
+      id: id,
+      title: "New Chat",
+      messages: [],
+      createdAt: Date.now()
     };
-
-    chats.unshift(chat);
-
-    currentChat = id;
-
+    currentChatId = id;
     saveStorage();
-
+    saveCurrentChat();
     renderHistory();
+    renderMessages();
+    return id;
+  }
 
-    loadChat(id);
+  function loadChat(id) {
+    if (!chats[id]) return;
+    currentChatId = id;
+    saveCurrentChat();
+    renderHistory();
+    renderMessages();
+  }
 
-}
+  function renameChatFromFirstMessage(id, text) {
+    if (!chats[id]) return;
+    if (chats[id].title === "New Chat") {
+      const trimmed = text.trim();
+      chats[id].title = trimmed.length > 40 ? trimmed.slice(0, 40) + "..." : trimmed;
+    }
+  }
 
-// ==============================
-// LOAD CHAT
-// ==============================
+  function renderHistory() {
+    if (!chatHistoryEl) return;
+    chatHistoryEl.innerHTML = "";
+    const chatIds = Object.keys(chats).sort((a, b) => chats[b].createdAt - chats[a].createdAt);
 
-function loadChat(id) {
+    chatIds.forEach((id) => {
+      const chat = chats[id];
+      const item = document.createElement("div");
+      item.className = "chat-history-item";
+      if (id === currentChatId) {
+        item.classList.add("active");
+      }
+      item.textContent = chat.title || "New Chat";
+      item.addEventListener("click", () => {
+        loadChat(id);
+      });
+      chatHistoryEl.appendChild(item);
+    });
+  }
 
-    const chat = chats.find(c => c.id === id);
-
+  function renderMessages() {
+    if (!messagesEl) return;
+    messagesEl.innerHTML = "";
+    const chat = chats[currentChatId];
     if (!chat) return;
 
-    currentChat = id;
-
-    messages.innerHTML = chat.messages;
-
+    chat.messages.forEach((msg) => {
+      appendMessageToDOM(msg.role, msg.text, false);
+    });
     scrollBottom();
+  }
 
-    saveStorage();
+  function appendMessageToDOM(role, text, shouldScroll) {
+    if (!messagesEl) return;
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "message " + (role === "user" ? "message-user" : "message-ai");
 
-}
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble";
+    bubble.textContent = text;
 
-// ==============================
-// SAVE CURRENT CHAT
-// ==============================
+    msgDiv.appendChild(bubble);
+    messagesEl.appendChild(msgDiv);
 
-function saveCurrentChat() {
+    if (shouldScroll) {
+      scrollBottom();
+    }
+  }
 
-    const chat = chats.find(c => c.id === currentChat);
+  function scrollBottom() {
+    if (!messagesEl) return;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 
-    if (!chat) return;
+  function showTypingIndicator() {
+    if (!messagesEl) return null;
+    const typingDiv = document.createElement("div");
+    typingDiv.className = "message message-ai typing-indicator";
+    typingDiv.id = "typingIndicator";
 
-    chat.messages = messages.innerHTML;
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble";
+    bubble.textContent = "Typing...";
 
-    const firstUser = messages.querySelector(".user-message");
+    typingDiv.appendChild(bubble);
+    messagesEl.appendChild(typingDiv);
+    scrollBottom();
+    return typingDiv;
+  }
 
-    if (firstUser && chat.title === "New Chat") {
-        chat.title = firstUser.innerText.substring(0, 30);
+  function removeTypingIndicator() {
+    const typingDiv = document.getElementById("typingIndicator");
+    if (typingDiv && typingDiv.parentNode) {
+      typingDiv.parentNode.removeChild(typingDiv);
+    }
+  }
+
+  async function sendMessage(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    if (!currentChatId || !chats[currentChatId]) {
+      createChat();
     }
 
+    const chat = chats[currentChatId];
+
+    chat.messages.push({ role: "user", text: trimmed });
+    renameChatFromFirstMessage(currentChatId, trimmed);
+    appendMessageToDOM("user", trimmed, true);
     saveStorage();
-
     renderHistory();
 
-}
+    if (userInput) {
+      userInput.value = "";
+    }
 
-// ==============================
-// CHAT HISTORY
-// ==============================
-
-function renderHistory() {
-
-    chatHistory.innerHTML = "";
-
-    chats.forEach(chat => {
-
-        const item = document.createElement("div");
-
-        item.className = "history-item";
-
-        item.textContent = chat.title;
-
-        if (chat.id === currentChat) {
-            item.style.background = "#2563eb";
-        }
-
-        item.addEventListener("click", () => {
-            loadChat(chat.id);
-            renderHistory();
-        });
-
-        chatHistory.appendChild(item);
-
-    });
-
-}
-
-// ==============================
-// FIRST LOAD
-// ==============================
-
-if (chats.length === 0) {
-
-    createChat();
-
-} else {
-
-    renderHistory();
-
-    loadChat(currentChat || chats[0].id);
-
-}
-
-// ==============================
-// NEW CHAT
-// ==============================
-
-newChatBtn.addEventListener("click", createChat);
-
-// =============================================
-// NOVA AI v6
-// PART 2 - CHAT SYSTEM
-// =============================================
-
-// ==============================
-// SEND MESSAGE
-// ==============================
-
-async function sendMessage() {
-
-    const text = input.value.trim();
-
-    if (!text) return;
-
-    // User Message
-    messages.innerHTML += `
-        <div class="user-message">
-            ${text}
-        </div>
-    `;
-
-    input.value = "";
-
-    saveCurrentChat();
-
-    scrollBottom();
-
-    // Typing Indicator
-    messages.innerHTML += `
-        <div class="bot-message" id="typing">
-            🤖 Nova AI is thinking...
-        </div>
-    `;
-
-    scrollBottom();
+    showTypingIndicator();
 
     try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: trimmed })
+      });
 
-        const response = await fetch("/api/chat", {
+      if (!response.ok) {
+        throw new Error("Server responded with status " + response.status);
+      }
 
-            method: "POST",
+      const data = await response.json();
+      const reply = data && typeof data.reply === "string" ? data.reply : "Sorry, I could not generate a response.";
 
-            headers: {
-                "Content-Type": "application/json"
-            },
+      removeTypingIndicator();
+      chat.messages.push({ role: "ai", text: reply });
+      appendMessageToDOM("ai", reply, true);
+      saveStorage();
+      saveCurrentChat();
 
-            body: JSON.stringify({
-                message: text
-            })
-
-        });
-
-        const data = await response.json();
-
-        document.getElementById("typing")?.remove();
-
-        if (!response.ok) {
-
-            throw new Error(data.error || "API Error");
-
-        }
-
-        messages.innerHTML += `
-            <div class="bot-message">
-                ${data.reply.replace(/\n/g, "<br>")}
-            </div>
-        `;
-
-        // Speak if available
-        if (typeof speak === "function") {
-            speak(data.reply);
-        }
-
-        // Save memory
-        Nova.memory.push({
-            user: text,
-            ai: data.reply,
-            time: new Date().toLocaleTimeString()
-        });
-
-        saveCurrentChat();
-
-        scrollBottom();
-
-    } catch (error) {
-
-        document.getElementById("typing")?.remove();
-
-        messages.innerHTML += `
-            <div class="bot-message">
-                ❌ Error connecting to Nova AI.
-            </div>
-        `;
-
-        console.error(error);
-
-        saveCurrentChat();
-
-        scrollBottom();
-
+      speakText(reply);
+    } catch (err) {
+      console.error("Chat request failed:", err);
+      removeTypingIndicator();
+      const errorText = "Something went wrong. Please try again.";
+      chat.messages.push({ role: "ai", text: errorText });
+      appendMessageToDOM("ai", errorText, true);
+      saveStorage();
     }
+  }
 
-}
+  function handleSend() {
+    if (!userInput) return;
+    const text = userInput.value;
+    sendMessage(text);
+  }
 
-// ==============================
-// EVENTS
-// ==============================
+  if (sendBtn) {
+    sendBtn.addEventListener("click", () => {
+      handleSend();
+    });
+  }
 
-sendBtn.addEventListener("click", sendMessage);
+  if (userInput) {
+    userInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+  }
 
-input.addEventListener("keydown", (e) => {
+  if (newChatBtn) {
+    newChatBtn.addEventListener("click", () => {
+      createChat();
+    });
+  }
 
-    if (e.key === "Enter") {
+  let englishVoice = null;
 
-        sendMessage();
+  function loadVoices() {
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    englishVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("en")) || null;
+  }
 
+  if (window.speechSynthesis) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  function speakText(text) {
+    if (!window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+      utterance.lang = "en-US";
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error("Speech synthesis failed:", err);
     }
+  }
 
-});
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// =============================================
-// NOVA AI v6
-// PART 3 - VOICE SYSTEM
-// =============================================
-
-// ==============================
-// TEXT TO SPEECH
-// ==============================
-
-function speak(text) {
-
-    if (!("speechSynthesis" in window)) return;
-
-    speechSynthesis.cancel();
-
-    const speech = new SpeechSynthesisUtterance(text);
-
-    speech.lang = "en-US";
-    speech.rate = 1;
-    speech.pitch = 1;
-    speech.volume = 1;
-
-    let voices = speechSynthesis.getVoices();
-
-    const setVoice = () => {
-
-        voices = speechSynthesis.getVoices();
-
-        const voice =
-            voices.find(v =>
-                v.lang.startsWith("en") &&
-                v.name.toLowerCase().includes("google")
-            ) ||
-            voices.find(v =>
-                v.lang.startsWith("en")
-            );
-
-        if (voice) {
-            speech.voice = voice;
-        }
-
-        speechSynthesis.speak(speech);
-
-    };
-
-    if (voices.length === 0) {
-        speechSynthesis.onvoiceschanged = setVoice;
-    } else {
-        setVoice();
-    }
-
-}
-
-// ==============================
-// SPEECH RECOGNITION
-// ==============================
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-if (SpeechRecognition && micBtn) {
-
-    const recognition = new SpeechRecognition();
-
+  if (SpeechRecognitionCtor && micBtn) {
+    recognition = new SpeechRecognitionCtor();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+
+    recognition.addEventListener("start", () => {
+      isListening = true;
+      micBtn.classList.add("listening");
+    });
+
+    recognition.addEventListener("end", () => {
+      isListening = false;
+      micBtn.classList.remove("listening");
+    });
+
+    recognition.addEventListener("result", (event) => {
+      const transcript = event.results && event.results[0] && event.results[0][0]
+        ? event.results[0][0].transcript
+        : "";
+      if (transcript && userInput) {
+        userInput.value = transcript;
+        sendMessage(transcript);
+      }
+    });
+
+    recognition.addEventListener("error", (event) => {
+      console.error("Speech recognition error:", event.error);
+      isListening = false;
+      micBtn.classList.remove("listening");
+    });
 
     micBtn.addEventListener("click", () => {
-    recognition.start();
-});
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error("Failed to start recognition:", err);
+      }
+    });
+  } else if (micBtn) {
+    micBtn.style.display = "none";
+  }
 
-recognition.onresult = (event) => {
-    input.value = event.results[0][0].transcript;
-    sendMessage();
-};
+  const startupSteps = [
+    "Initializing...",
+    "Loading AI Core...",
+    "Connecting to Gemini...",
+    "Loading Memory...",
+    "Loading Voice Engine...",
+    "Optimizing Performance...",
+    "System Online \u2713"
+  ];
 
-recognition.onend = () => {};
-
-recognition.onerror = () => {};
-
-
-
-      // =============================================
-// NOVA AI v6
-// PART 4 - STARTUP SYSTEM
-// =============================================
-
-window.addEventListener("load", () => {
-
-    if (app) {
-        app.style.opacity = "0";
+  function runStartupAnimation() {
+    if (!bootText || !startupScreen || !appEl) {
+      if (startupScreen) startupScreen.classList.add("hide");
+      if (appEl) appEl.style.opacity = "1";
+      return;
     }
 
-    const steps = [
-        "Initializing...",
-        "Loading AI Core...",
-        "Connecting to Gemini...",
-        "Loading Memory...",
-        "Loading Voice Engine...",
-        "Optimizing Performance...",
-        "System Online ✓"
-    ];
+    let stepIndex = 0;
+    const stepDuration = 450;
 
-    let index = 0;
+    function showNextStep() {
+      if (stepIndex >= startupSteps.length) {
+        startupScreen.classList.add("hide");
+        appEl.style.opacity = "1";
+        return;
+      }
+      bootText.textContent = startupSteps[stepIndex];
+      stepIndex += 1;
+      setTimeout(showNextStep, stepDuration);
+    }
 
-    const interval = setInterval(() => {
+    showNextStep();
+  }
 
-        if (bootText && index < steps.length) {
-            bootText.textContent = steps[index];
-        }
+  function init() {
+    loadStorage();
 
-        index++;
+    const savedCurrentId = localStorage.getItem(CURRENT_CHAT_KEY);
+    const chatIds = Object.keys(chats);
 
-        if (index >= steps.length) {
+    if (savedCurrentId && chats[savedCurrentId]) {
+      currentChatId = savedCurrentId;
+    } else if (chatIds.length > 0) {
+      currentChatId = chatIds.sort((a, b) => chats[b].createdAt - chats[a].createdAt)[0];
+    } else {
+      currentChatId = createChat();
+    }
 
-            clearInterval(interval);
+    renderHistory();
+    renderMessages();
+    runStartupAnimation();
+  }
 
-            setTimeout(() => {
-
-                if (startupScreen) {
-                    startupScreen.classList.add("hide");
-                }
-
-                if (app) {
-                    app.style.opacity = "1";
-                }
-
-            }, 800);
-
-        }
-
-    }, 700);
-
+  init();
 });
-
-// =============================================
-// NOVA AI READY
-// =============================================
-
-console.log(`
-==================================
-      NOVA AI v6 READY
-==================================
-Status  : Online
-Voice   : Enabled
-Memory  : Enabled
-Storage : Enabled
-==================================
-`);  
-
-
-
-                            
+```
