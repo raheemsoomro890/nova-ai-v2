@@ -1,3 +1,5 @@
+alert("Script Loaded");
+"use strict";
 ```javascript
 "use strict";
 
