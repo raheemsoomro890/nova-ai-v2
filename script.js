@@ -1,6 +1,6 @@
 alert("Script Loaded");
 "use strict";
-```javascript
+
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -377,3 +377,4 @@ document.addEventListener("DOMContentLoaded", () => {
   init();
 });
 ```
+alert("Startup Finished");
